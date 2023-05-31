@@ -1,1 +1,3 @@
 # omnisoot-cv
+
+omnisoot is an object-oriented computational tool for the simulation of soot formation and evolution in flames and reactors, and the process design and optimization of Carbon Black. It accommodates a variety of particle dynamics, inception, growth, and oxidation models that can be combined and used for target simulations. Reaction mechanisms are processed by Cantera that is used to compute thermodynamic and kinetics properties of the gas mixture. omnisoot can used from Python and a web interface which provides post-processing and visualization tools. A series of examples are also available in the form of Jupyter notebooks and Python scripts.
