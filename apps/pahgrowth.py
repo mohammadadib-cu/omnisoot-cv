@@ -1,4 +1,4 @@
-from ..lib._omnisoot import CReactDim, CDimerCoal, CCrossLink, CCrossLinkMod, CCrossLinkMerge
+from ..lib._omnisoot import CReactDim, CDimerCoal, CCrossLink, CCrossLinkMod, CCrossLinkMerge, CIrrevDim, CEBridge
 
 class PAHGrowthAbstract:
     def __init__(self, soot_wrapper):
@@ -48,4 +48,14 @@ class CrossLinkMerge(PAHGrowthAbstract, CCrossLinkMerge):
     def __init__(self, soot_wrapper):
         super().__init__(soot_wrapper);
 
-PAH_GROWTH_MODELS = [ReactDim, DimerCoal, CrossLink, CrossLinkMod, CrossLinkMerge]
+class IrrevDim(PAHGrowthAbstract, CIrrevDim):
+    serialized_name = "IrreversibleDimerization"
+    def __init__(self, soot_wrapper):
+        super().__init__(soot_wrapper);
+
+class EBridge(PAHGrowthAbstract, CEBridge):
+    serialized_name = "EBridgeFormation"
+    def __init__(self, soot_wrapper):
+        super().__init__(soot_wrapper);
+
+PAH_GROWTH_MODELS = [ReactDim, DimerCoal, CrossLink, CrossLinkMod, CrossLinkMerge, IrrevDim, EBridge]

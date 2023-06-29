@@ -3,7 +3,9 @@ import cantera as ct
 from ..lib._omnisoot import CSootGas
 
 class SootGas(CSootGas):
-    key_species_list = ["C2H2", "H", "H2", "O2", "OH", "H2O", "CO"]
+    key_species_list = ["C2H2", "H", "H2", "O2", "OH", "H2O", "CO"];
+    MW_carbon = 12.011e-3 # [kg/mol]
+    MW_hydrogen = 1.008e-3 # [kg/mol]
     def __init__(self, cantera_gas):
         super().__init__(cantera_gas);
         self.init_by_cantera(cantera_gas)
@@ -104,10 +106,19 @@ class SootGas(CSootGas):
 
     def init_by_cantera(self, cantera_gas):
         self.update_MWs(cantera_gas.molecular_weights/1000.0);
+        self.update_MW_carbon_array(self.get_no_element_array("C", cantera_gas)*self.MW_carbon);
+        self.update_MW_hydrogen_array(self.get_no_element_array("H", cantera_gas)*self.MW_hydrogen);
         self.update_thermo_TPX(cantera_gas.T, cantera_gas.P, cantera_gas.X);
         self.update_transport();
         speices_indices_dict = self.build_speices_indices_dict(cantera_gas);
-        self.set_species_indices(speices_indices_dict)
+        self.set_species_indices(speices_indices_dict);
+    
+    def get_no_element_array(self, el, cantera_gas):
+        gas = cantera_gas;
+        no_element_array = np.zeros(gas.n_species);
+        for i in range(gas.n_species):
+            no_element_array[i] = gas.n_atoms(gas.species_names[i], el);
+        return no_element_array;
     
     def build_speices_indices_dict(self, cantera_gas):
         speices_indices_dict = {};
@@ -120,16 +131,7 @@ class SootGas(CSootGas):
 
         
     def carbon_mass(self):
-        #MW_C = ct.Element("C").weight;
         gas = self.cantera_gas;
-        # total_c_mass = 0.0;
-        # for sp in gas.species_names:
-        #     sp_index = gas.species_names.index(sp);
-        #     no_c = gas.n_atoms(sp, "C");
-        #     total_c_mass += gas.X[sp_index]*no_c*MW_C;
-
-        # total_c_mass = total_c_mass / gas.mean_molecular_weight; #[kg C/kg gas]
-        #return total_c_mass
         return gas.elemental_mass_fraction('C')
     
     def elemental_mass_fraction(self, element_name):

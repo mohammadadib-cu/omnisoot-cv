@@ -1,5 +1,5 @@
 import cantera as ct
-from omnisoot import ConstantVolumeReactor, SootGas
+from omnisoot import ConstantVolumeReactor, SootGas, SootThermo
 import numpy as np
 import os
 import pandas as pd
@@ -24,7 +24,7 @@ soot_gas.TPX = T, P, X;
 max_res_time = 0.1;
 ### PAH growht models
 soot = constUV.soot;
-PAH_growth_model_type = ["ReactiveDimerization", "DimerCoalescence" ,"CrossLinking",
+PAH_growth_model_type = ["ReactiveDimerization", "DimerCoalescence",
                         "CrossLinkingModified"][0]
 soot.PAH_growth_model_type = PAH_growth_model_type;
 ### Adjusting the chemical dimer formation and PAH chemisorption rates
@@ -80,13 +80,7 @@ step = 0;
 while constUV.restime < max_res_time:
     step += 1;
     constUV.step();
-    log = f"t={constUV.restime:0.5e} s \n"+\
-      f"T={constUV.T:0.3f} K\n"+\
-      f"soot_mass[kg/kg]={(soot.total_mass):0.5e}\n"+\
-      40*"-"  ;
-    print(log)
-    rho = soot_gas.density
-    if step%1==0:
+    if step%2==0:
         append();
 end_time = time.time();
 print(f"the simulation time is {end_time-start_time}");
@@ -123,9 +117,15 @@ soot_columns += ['inception_mass[mol/kg-s]', "coagulation_mass[mol/kg-s]",
                  "PAH_adsorption_mass[mol/kg-s]", "surface_growth_mass[mol/kg-s]"];
 soot_data += [states.inception_mass, states.coagulation_mass, states.PAH_adsorption_mass, states.surface_growth_mass];
 
+soot_columns += ['u_soot[J/m3]'];
+u_mass_soot = np.array([SootThermo.u_mass_soot(T) for T in states.T]);
+U_soot = states.total_mass*states.density*u_mass_soot
+soot_data += [U_soot];
 
-flow_columns += ["t[s]", "T[K]", "density[kg/m3]", "mean_MW[kg/mol]"];
-flow_data += [states.restime ,states.T, states.density, states.mean_molecular_weight/1000];
+flow_columns += ["t[s]", "P[kPa]" , "T[K]", "density[kg/m3]", "mean_MW[kg/mol]", "u_gas[J/m3]"];
+U_gas = states.density*states.int_energy_mass;
+flow_data += [states.restime, states.P ,states.T, states.density, states.mean_molecular_weight/1000,
+             U_gas];
 
 species_columns = [f"{sp}" for sp in gas.species_names];
 species_data += [states.X[:,i] for i in range(len(gas.species_names))];
@@ -134,12 +134,37 @@ columns = flow_columns + soot_columns + species_columns;
 data = (np.array(flow_data + soot_data + species_data)).transpose();
 
 ### Writing files to disk
-output_dir = f"results/sample_reactor/{PAH_growth_model_type}";
+output_dir = f"results/{PAH_growth_model_type}";
 if not os.path.exists(output_dir):
     os.makedirs(output_dir);
 prop_df = pd.DataFrame(data=data, columns = columns)
-prop_df.to_excel(f"{output_dir}/results.xlsx");
+prop_df.to_csv(f"{output_dir}/results.csv");
 
+
+### Energy Balance for unit of reactor volume
+plt.rcParams.update({'font.family':'Times New Roman', 'font.size': 22});
+fig, ax = plt.subplots(figsize=(9,8));
+
+ax.plot(states.restime, (U_gas-U_gas[0]) + (U_soot-U_soot[0]),
+    color="#000000", linewidth = 1, linestyle = "solid");
+    
+# Y axis
+ax.set_ylabel("Internal Energy Residual $\mathregular{[J/m^3]}$", {'fontsize' : 25})
+ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+
+
+# X axis
+ax.set_xlabel("t [s]", {'fontsize' : 25})
+ax.set_xlim([0, max_res_time]);
+
+
+plot_dir = f"energy_balance";
+if not os.path.exists(plot_dir):
+    os.makedirs(plot_dir);
+plt.tight_layout()
+plt.savefig(f"{plot_dir}/energy.jpg")
+
+### Elemental Balance
 plt.rcParams.update({'font.family':'Times New Roman', 'font.size': 22});
 fig, ax = plt.subplots(figsize=(9,8));
 
@@ -157,7 +182,7 @@ ax.plot(states.restime, H_error,
 # Y axis
 ax.set_yscale('log');
 ax.set_ylabel("Relative Error", {'fontsize' : 25})
-ax.set_ylim([1e-7, 1e-3]);
+ax.set_ylim([1e-12, 1e-6]);
 
 # X axis
 ax.set_xlabel("t [s]", {'fontsize' : 25})

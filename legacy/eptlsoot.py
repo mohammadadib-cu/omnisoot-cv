@@ -1,4 +1,4 @@
-from .lib._omnisoot import CSootModel, CPFROde, CPFRSootOde, CFlameSolver, CFlameSolverOpt
+from omnisoot.lib._omnisoot import CSootModel, CPFROde, CPFRSootOde, CFlameSolver, CFlameSolverOpt
 
 class SootModel(CSootModel):
     def __init__(self):

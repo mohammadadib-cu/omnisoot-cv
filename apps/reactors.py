@@ -1,8 +1,10 @@
-from ..lib._omnisoot import CPFRSoot, CConstUVSoot, CConstUVSimpleSoot, CPSRSoot
-from .sootwrappers import SootWrapper
-from .sootgas import SootGas
+# Third-party libraries
 from scipy import integrate
 import numpy as np
+# Local imports
+from omnisoot.lib._omnisoot import CPFRSoot, CConstUVSootHighCon, CConstUVSootLowCon, CPSRSoot
+from omnisoot.apps.sootwrappers import SootWrapper
+from omnisoot.apps.sootgas import SootGas
 
 class ReactorAbstract:
     def __init__(self, soot_gas):
@@ -122,12 +124,15 @@ class Inlet:
         self._Y = soot_gas.Y
         self._X = soot_gas.X
 
+
+
 class ConstantVolumeReactorMixin:
     def start(self):
         if self.check_soot_array(self.initial_soot):
             y0 = np.hstack((self.soot_gas.rho, self.soot_gas.T, self.soot_gas.Y_array, self.initial_soot));
             self.solver = integrate.LSODA(fun=self.derivatives, t0=0, y0=y0, t_bound=self.max_time,
-                                        first_step=self.first_step, max_step = self.max_step);
+                                        first_step=self.first_step, max_step = self.max_step,
+                                        rtol=self.rtol, atol=self.atol);
 
 
     @property
@@ -160,7 +165,7 @@ class ConstantVolumeReactorMixin:
     def gas_elemental_mass(self, element_name) -> float:
         return self.soot_gas.elemental_mass_fraction(element_name);
 
-class ConstantVolumeReactor(ConstantVolumeReactorMixin, ReactorAbstract, CConstUVSoot):
+class ConstantVolumeReactorHighConcentration(ConstantVolumeReactorMixin, ReactorAbstract, CConstUVSootHighCon):
     def __init__(self, soot_gas):
         super().__init__(soot_gas);
         # super(ReactorAbstract, self).__init__();
@@ -175,6 +180,9 @@ class ConstantVolumeReactor(ConstantVolumeReactorMixin, ReactorAbstract, CConstU
         self.first_step = 1e-10;
         # Max step
         self.max_step = 1e-3;
+        # Tol
+        self.rtol= 1e-5
+        self.atol= 1e-10;
         # Initial soot
         self.initial_soot = self.soot_wrapper.min_array;
         # Temperature solver
@@ -182,7 +190,7 @@ class ConstantVolumeReactor(ConstantVolumeReactorMixin, ReactorAbstract, CConstU
 
 
 
-class ConstantVolumeReactorSimple(ConstantVolumeReactorMixin, ReactorAbstract, CConstUVSimpleSoot):
+class ConstantVolumeReactorLowConcentration(ConstantVolumeReactorMixin, ReactorAbstract, CConstUVSootLowCon):
     def __init__(self, soot_gas):
         super().__init__(soot_gas);
         # super(ReactorAbstract, self).__init__();
@@ -197,11 +205,20 @@ class ConstantVolumeReactorSimple(ConstantVolumeReactorMixin, ReactorAbstract, C
         self.first_step = 1e-10;
         # Max step
         self.max_step = 1e-3;
+        # Tol
+        self.rtol= 1e-5
+        self.atol= 1e-10;
         # Initial soot
         self.initial_soot = self.soot_wrapper.min_array;
         # Temperature solver
         self.temperature_solver_type = "energy_equation";
 
+class ConstantVolumeReactor:
+    def __new__(cls, soot_gas, high_concentration = False):
+        if high_concentration:
+            return ConstantVolumeReactorHighConcentration(soot_gas);
+        else:
+            return ConstantVolumeReactorLowConcentration(soot_gas);
 
 
 class PerfectlyStirredReactor(ReactorAbstract, CPSRSoot):

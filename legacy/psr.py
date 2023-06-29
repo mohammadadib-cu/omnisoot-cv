@@ -2,7 +2,7 @@
 import cantera as ct
 import numpy as np
 import scipy.integrate
-from .lib._omnisoot import CSootModel
+from omnisoot.lib._omnisoot import CSootModel
 
 
 class Inlet:
