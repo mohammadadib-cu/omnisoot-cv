@@ -124,7 +124,7 @@ class SootGas(CSootGas):
         speices_indices_dict = {};
         for species in self.key_species_list:
             if species in cantera_gas.species_names:
-                speices_indices_dict[species] = cantera_gas.species_names.index(species);
+                speices_indices_dict[bytes(species, "ascii")] = cantera_gas.species_names.index(species);
             else:
                 raise ValueError(f"{species} does not exist in cantera gas object!");
         return speices_indices_dict;

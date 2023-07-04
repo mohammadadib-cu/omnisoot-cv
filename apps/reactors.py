@@ -45,9 +45,12 @@ class PlugFlowReactor(ReactorAbstract, CPFRSoot):
         # Max length
         self.max_length = 100;
         # First step
-        self.first_step = 1e-10;
+        self.first_step = None;
         # Max step
         self.max_step = 1e-3;
+        # Tol
+        self.rtol= 1e-5;
+        self.atol= 1e-10;
 
     def start(self):
         if self.check_soot_array(self.inlet.soot):
@@ -56,7 +59,8 @@ class PlugFlowReactor(ReactorAbstract, CPFRSoot):
             self.set_mdot(self.inlet.mdot);
             y0 = np.hstack((0.0, self.inlet.mdot, self.inlet.T, self.inlet.Y, self.inlet.soot));
             self.solver = integrate.LSODA(fun=self.derivatives, t0=0, y0=y0, t_bound=self.max_length,
-                                        first_step=self.first_step, max_step = self.max_step);
+                                        first_step=self.first_step, max_step = self.max_step,
+                                        rtol=self.rtol, atol=self.atol);
             
 
     @property
@@ -70,7 +74,7 @@ class PlugFlowReactor(ReactorAbstract, CPFRSoot):
 
     @property
     def soot_carbon_flux(self) -> float:
-        return self.soot_wrapper.soot_gas.elemental_mass_fraction('C') * self.mdot;
+        return self.soot_wrapper.soot_model.carbon_mass() * self.mdot;
 
 
     @property
@@ -84,7 +88,7 @@ class PlugFlowReactor(ReactorAbstract, CPFRSoot):
 
     @property
     def soot_hydrogen_flux(self) -> float:
-        return self.soot_wrapper.soot_gas.elemental_mass_fraction('H') * self.mdot;
+        return self.soot_wrapper.soot_model.hydrogen_mass() * self.mdot;
 
     @property
     def gas_elemental_flux(self, element_name) -> float:
@@ -121,6 +125,28 @@ class Inlet:
     def Y(self, Y):
         soot_gas = self.reactor.soot_gas;
         soot_gas.Y = Y;
+        self._Y = soot_gas.Y
+        self._X = soot_gas.X
+
+    @property
+    def TPX(self):
+        return self.T, self.P, self._X;
+
+    @TPX.setter
+    def TPX(self, TPX):
+        soot_gas = self.reactor.soot_gas;
+        soot_gas.TPX = TPX;
+        self._Y = soot_gas.Y;
+        self._X = soot_gas.X;
+
+    @property
+    def TPY(self):
+        return self.T, self.P, self._Y;
+
+    @TPY.setter
+    def TPY(self, TPY):
+        soot_gas = self.reactor.soot_gas;
+        soot_gas.TPY = TPY;
         self._Y = soot_gas.Y
         self._X = soot_gas.X
 
@@ -177,12 +203,12 @@ class ConstantVolumeReactorHighConcentration(ConstantVolumeReactorMixin, Reactor
         # Max residence time
         self.max_time = 100;
         # First step
-        self.first_step = 1e-10;
+        self.first_step = None;
         # Max step
         self.max_step = 1e-3;
         # Tol
-        self.rtol= 1e-5
-        self.atol= 1e-10;
+        self.rtol = 1e-7;
+        self.atol = 1e-12;
         # Initial soot
         self.initial_soot = self.soot_wrapper.min_array;
         # Temperature solver
@@ -202,12 +228,12 @@ class ConstantVolumeReactorLowConcentration(ConstantVolumeReactorMixin, ReactorA
         # Max residence time
         self.max_time = 100;
         # First step
-        self.first_step = 1e-10;
+        self.first_step = None;
         # Max step
         self.max_step = 1e-3;
         # Tol
-        self.rtol= 1e-5
-        self.atol= 1e-10;
+        self.rtol= 1e-7;
+        self.atol= 1e-12;
         # Initial soot
         self.initial_soot = self.soot_wrapper.min_array;
         # Temperature solver
