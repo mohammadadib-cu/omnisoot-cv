@@ -4,6 +4,10 @@ omnisoot (previously eptlsoot) is an object-oriented computational tool for the 
 omnisoot has been registered for copyright on 31 May 2023 by [Canadian Intellectual Property Office (CIPO)](https://www.canada.ca/en/services/business/ip.html) under regirstration number 1203139.
 
 ### updates
+v0.1.7:
+ - Performance improvements for reactors
+ - Temperature time history capability is enabled for Constatn Volume Reactor
+
 v0.1.6:
  - The formation and sensible energy of soot is tracked in the energy equation to close the energy gap in adiabatic processes. 
  - A new class, SootThermo, is added to the package to calculate the heat capacity and internal energy of soot is based on the properties of  [graphite](https://github.com/Cantera/cantera/blob/main/data/graphite.yaml). 
