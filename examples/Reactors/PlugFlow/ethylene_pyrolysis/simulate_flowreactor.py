@@ -38,7 +38,7 @@ def simulate_flowreactor(
     pfr.set_fix_temperature_profile(fixed_profile);
     pfr.max_step = 1e-4;
     # Configuring soot model
-    soot = soot = pfr.soot;
+    soot = pfr.soot;
     soot.particle_dynamics_model_type = particle_dynamics_model_type;
     soot.PAH_growth_model_type = PAH_growth_model_type;
     soot.set_precursor_names(precursors);
