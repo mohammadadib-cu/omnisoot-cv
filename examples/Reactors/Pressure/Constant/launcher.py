@@ -1,7 +1,7 @@
 import time
 import cantera as ct
 from plot import plot
-from simulate_shocktube import simulate_shocktube
+from simulate import simulate
 
 MECH_PATH = {
     "Caltech":"./data/Caltech.yaml",

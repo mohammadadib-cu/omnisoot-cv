@@ -41,7 +41,7 @@ def make_extra_dict(reactor):
     );
     return extra_dict_base;
 
-def simulate_shocktube(
+def simulate(
     mech_name, 
     gas,
     PAH_growth_model_type, 
