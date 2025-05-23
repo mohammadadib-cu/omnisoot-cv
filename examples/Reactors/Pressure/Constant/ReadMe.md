@@ -1,4 +1,4 @@
-# Constant Pressure Reactions
+# Constant Pressure Reactor
 
 This is an example for simulating a 5% CH<sub>4</sub>-Ar mixture using the pressure reactor model, the monodisperse population balance model, and four different inception models (aka `PAH_growth_model`s).
 

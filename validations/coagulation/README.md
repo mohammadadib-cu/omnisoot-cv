@@ -1,0 +1,3 @@
+# Validation of Coagulation in Particle Dynamics Models
+
+This directory contains two cases to validate the coagulation sub-models of monodisperse and sectional population balance models of omnisoot in free moleuclar and continuum regime. The details of simulation cases are explained in [omnisoot paper](https://github.com/mohammadadib-cu/omnisootpaper). Each of **free_moleuclar** and **continuum** directories contains a standalone case that can be excecuted by running **launcher.py** that generates the results and graphs for both particle dynamics model. 

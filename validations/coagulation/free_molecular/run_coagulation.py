@@ -27,7 +27,7 @@ def run_coagulation(particle_dynamics_model_type):
     ### Initial conditions
     soot_gas.TPX = T, P, X;
     ## Simulation time
-    max_res_time = 0.05;
+    max_res_time = 0.5;
     ## Getting the handle to soot
     soot = reactor.soot;
     ## Setting particle dynamics model
@@ -84,7 +84,8 @@ def run_coagulation(particle_dynamics_model_type):
     # The collision occurs in the free molecular regime, so the collision frequency interpolation type is set to "free_molecule"
     particle_dynamics_model.beta_interp_method_type = "free_molecule"
     ## Reactor integrator settings
-    reactor.max_step = 2e-4;
+    reactor.max_step = 8e-4;
+    reactor.solver_type = "BDF"
     reactor.max_time = max_res_time;
     ## The energy equations is not solved, so the temperature is kept constants
     reactor.temperature_solver_type = "isothermal";
