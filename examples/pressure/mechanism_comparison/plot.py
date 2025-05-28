@@ -64,6 +64,12 @@ def scale_to_label(scale_factor):
 
 
 def plot():
+    # Check if Latex is installed
+    if shutil.which('latex'):
+        use_tex = True;
+    else:
+        use_tex = False;
+    
     mech_names = ["NUIG", "FFCM2", "Caltech", "KAUST", "ABF1bar", "ITV", "CRECK"];
 
     # Plot configs
@@ -138,7 +144,7 @@ def plot():
     # ---------------------------------------------------------------------------------------------------------------
     # Ploting the carbon mass fraction of CH4
     # ---------------------------------------------------------------------------------------------------------------
-    plt.rcParams.update({"text.usetex": True, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
+    plt.rcParams.update({"text.usetex": use_tex, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
     fig, ax = plt.subplots(figsize=figsize);
     
     header = "CH4";
@@ -201,7 +207,7 @@ def plot():
     # ---------------------------------------------------------------------------------------------------------------
     # Ploting the carbon mass fraction of C2H2
     # ---------------------------------------------------------------------------------------------------------------
-    plt.rcParams.update({"text.usetex": True, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
+    plt.rcParams.update({"text.usetex": use_tex, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
     fig, ax = plt.subplots(figsize=figsize);
 
     header = "C2H2";
@@ -262,7 +268,7 @@ def plot():
     # ---------------------------------------------------------------------------------------------------------------
     # Ploting the carbon mass fraction of A2R5
     # ---------------------------------------------------------------------------------------------------------------
-    plt.rcParams.update({"text.usetex": True, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
+    plt.rcParams.update({"text.usetex": use_tex, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
     fig, ax = plt.subplots(figsize=figsize);
     
     header = "A2R5";
