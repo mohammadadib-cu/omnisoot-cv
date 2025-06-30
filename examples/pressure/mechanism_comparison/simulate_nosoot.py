@@ -5,17 +5,8 @@ import pandas as pd
 import os
 
 Av = 6.0221408e+23; #1/mol;
-MECH_DICT = {
-    "Caltech":"./data/Caltech.yaml",
-    "KAUST": "./data/KAUST.yaml",
-    "ABF1bar" : "./data/abf_1bar.yaml",
-    "CRECK" : "./data/CRECK_no_BINS.yaml",
-    "ITV" : "./data/ITV_PAH.yaml",
-    "NUIG" : "./data/NUIG.yaml",
-    "FFCM2" : "./data/FFCM2.yaml",
-}
-
 def simulate_nosoot(
+    gas,
     mech_name, 
     T5_K, 
     P5_atm, 
@@ -23,7 +14,6 @@ def simulate_nosoot(
     max_res_time, 
     results_dir = "results"
 ):
-    gas = ct.Solution(MECH_DICT[mech_name]);
     soot_gas = SootGas(gas);
     soot_gas.TPX = T5_K, P5_atm * ct.one_atm, initial_composition;
     ### Building and configruing the reactor

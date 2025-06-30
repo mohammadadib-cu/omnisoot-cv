@@ -1,8 +1,8 @@
 from collections import defaultdict
 from pathlib import Path
 import os
+import shutil
 
-import cantera as ct
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import numpy as np
@@ -30,6 +30,7 @@ HEADER_DICT = {
     "A4" : ["A4", "C16H10", "A4XC16H10"], 
     "A3R5" : ["A3R5"], 
     "A4R5" : ["A4R5"], 
+    "volume_fraction" : ["volume_fraction"], 
 }
 
 MW_carbon = 0.012; # kg/mol
@@ -41,15 +42,12 @@ def fetch_species_array(df, key):
             return df[sp].to_numpy();
     return None;
 
-def save_plot(name, postprocess_dir, save_pdf = True, white_back = "None", in_paper = False, pad = 0.5):
+def save_plot(name, postprocess_dir, pad = 0.5):
     if not os.path.exists(postprocess_dir):
         os.makedirs(postprocess_dir);
     # plt.tight_layout(pad = pad);
-    facecolor = white_back;
-    plt.savefig(f"{postprocess_dir}/{name}.svg", facecolor=facecolor);
-    if save_pdf:
-        filename = f"{postprocess_dir}/{name}.pdf";
-        plt.savefig(filename);
+    filename = f"{postprocess_dir}/{name}.pdf";
+    plt.savefig(filename);
 
 
 def scale_to_label(scale_factor):
@@ -62,42 +60,39 @@ def scale_to_label(scale_factor):
         f"$\\times10^{exponent}$"
     )
 
-
-def plot():
-    # Check if Latex is installed
+def use_tex():
+    """Check if LaTeX is installed on the system."""
     if shutil.which('latex'):
-        use_tex = True;
+        return True;
     else:
-        use_tex = False;
-    
-    mech_names = ["NUIG", "FFCM2", "Caltech", "KAUST", "ABF1bar", "ITV", "CRECK"];
+        return False;
 
+def plot_nosoot():    
+    mech_names = ["FFCM2", "Caltech", "KAUST", "ABF1bar", "ITV", "CRECK"];
     # Plot configs
     result_dir = f"results/";
     exp_dir = "data";
     postprocess_dir = f"post_process";
     
     linestyles = ["solid", "dashed", "dashdot", "dotted"];
-    
     cmap_name = ['hsv', "YlOrRd", "YlGnBu", "YlGn"][0];
-    
+
     color_offset = 1
     step = 1;
-    n_models = len(mech_names) - 1;
+    n_models = len(mech_names);
     cmap = plt.get_cmap(cmap_name, n_models*step + color_offset)
+
     colors = [cmap(color_offset + i*step) for i in range(n_models)];
     color_black = (np.float64(0), np.float64(0), np.float64(0), np.float64(1))
-    colors = colors[:1] + [color_black] + colors[1:];
+    colors = [color_black] + colors[1:];
     
+    exp_color = "#ff8833";
+    area_alpha = 0.2;
     linewidth = 2;
-    markersize = 10;
-    ticklength = 5;
-    tickwidth = 0.75;
     figsize = (6, 5.5);
     fontsize = 24;
-    legend_fontsize = 18;
     axis_fontsize = 26;
-    letter_fontsize = 32;
+    plt.rcParams.update({"text.usetex": use_tex(), 'font.size': fontsize, 'figure.constrained_layout.use': True});
     
     labels = {
         "Caltech" : "Caltech",
@@ -105,18 +100,10 @@ def plot():
         "ABF1bar" : "ABF",
         "ITV" : "ITV",
         "CRECK" : "CRECK",
-        "NUIG" : "NUIG",
         "FFCM2" : "FFCM2",
         "CH4" : "$\\mathrm{CH_4}$", 
         "C2H4" : "$\\mathrm{C_2H_4}$",
         "C2H2" : "$\\mathrm{C_2H_2}$",
-        "A1" : "A1",
-        "A2" : "A2",
-        "A3" : "A3",
-        "A4" : "A4",
-        "A2R5" : "A2R5",
-        "A3R5" : "A3R5",
-        "A4R5" : "A4R5",
     }
 
     # Reading the simulation results
@@ -129,189 +116,296 @@ def plot():
         df = pd.read_csv(file_path);
         results_df[mech_name] = df;
     
-    # Calculating the initial carbon mass fraction
-    df = results_df["Caltech"];
-    sp_index = list(df.columns).index("N2");
-    x_columns = list(df.columns[sp_index:]);
-    gas = ct.Solution(MECH_DICT["Caltech"]);
-    lookup_index = 0;
-    gas.TPX = df.iloc[lookup_index]["T[K]"].item(), df.iloc[lookup_index]["P[Pa]"].item(), df.iloc[lookup_index][x_columns].to_numpy();
-    mfc_c_0 = 0.0;
-    n_c_dict = {sp:gas.n_atoms(sp, "C") for sp in gas.species_names}
-    for sp_index, sp in enumerate(gas.species_names):
-        mfc_c_0 += gas.n_atoms(sp, "C") * MW_carbon * gas.X[sp_index].item() / (gas.mean_molecular_weight / 1000)
+
+    # Reading the experimental data
+    exp_df = pd.read_csv("data/species.csv");
 
     # ---------------------------------------------------------------------------------------------------------------
-    # Ploting the carbon mass fraction of CH4
+    # Ploting mole fraction of CH4
     # ---------------------------------------------------------------------------------------------------------------
-    plt.rcParams.update({"text.usetex": use_tex, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
     fig, ax = plt.subplots(figsize=figsize);
     
     header = "CH4";
-    scale_factor = 1;
+    scale_factor = 100;
     time_factor = 1000;
     
-    mech_index = 0;
-    mech_name = mech_names[mech_index]
+    # Experimental
+    t_data_exp = exp_df["t [s]"].to_numpy();
+    f_data_exp = exp_df["X_CH4 [-]"].to_numpy();
+    f_sigma_exp = exp_df["sigmaX_CH4 [-]"].to_numpy();
+
+    ax.plot(t_data_exp*time_factor, f_data_exp*scale_factor,
+        linewidth = linewidth, linestyle = "solid", 
+            label = "Data", color = exp_color);
+
+    ax.fill_between(t_data_exp*time_factor, (f_data_exp - f_sigma_exp)*scale_factor, (f_data_exp + f_sigma_exp)*scale_factor,
+                color = exp_color, alpha = area_alpha)
     
+    # Numerical
     for mech_index, mech_name in enumerate(mech_names):
         df = results_df[mech_name];
         t_data = df["t[s]"];
-        f_data = n_c_dict[header] * fetch_species_array(df, header) * MW_carbon / df["mean_MW[kg/mol]"] / mfc_c_0;
+        f_data = fetch_species_array(df, header);
+        linestyle = "dashed" if mech_name == "FFCM2" else "solid"
         ax.plot(t_data*time_factor, f_data*scale_factor,
-               linewidth = linewidth, linestyle = linestyles[0],
+            linewidth = linewidth, linestyle = linestyle,
                 label = labels[mech_name], color = colors[mech_index]);
     
     #Y axis
-    ax.set_ylabel(f"Carbon mass fraction of " + labels[header] + scale_to_label(scale_factor), {'fontsize' : axis_fontsize});
-    ax.set_ylim([0, 0.8]);
-    ax.yaxis.set_major_locator(MultipleLocator(0.2))
-    ax.yaxis.set_minor_locator(MultipleLocator(0.04))
-    
+    ax.set_ylabel(f"Mole fraction of " + labels[header] + scale_to_label(scale_factor), {'fontsize' : axis_fontsize});
+    ax.set_ylim([0, 5.1]);
+    ax.yaxis.set_major_locator(MultipleLocator(1))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.2))
+
     # X axis
     ax.set_xlabel("t [ms]", {'fontsize' : axis_fontsize});
-    ax.set_xlim([-0.1, 5.1]);
-    ax.xaxis.set_major_locator(MultipleLocator(1))
-    ax.xaxis.set_minor_locator(MultipleLocator(0.2))
-    legend = ax.legend(loc = (0.61, 0.4), ncol = 1, fontsize = 18, columnspacing = 0.1,
+    ax.set_xlim([-0.03, 2.03]);
+    ax.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.1))
+
+    ax.legend(loc = (0.55, 0.35), ncol = 1, fontsize = 19, columnspacing = 0.1,
                     framealpha=0);
-    
-    left, bottom, width, height = [0.28, 0.52, 0.35, 0.4]
-    ax2 = fig.add_axes([left, bottom, width, height])
-    
+
+    ax.text(0.15, 0.78, "(a)", transform=ax.transAxes, fontsize = 32)
+
+    save_plot(header, postprocess_dir = postprocess_dir, pad = 0.4)
+
+
+    # ---------------------------------------------------------------------------------------------------------------
+    # Ploting the carbon mass fraction of C2H4
+    # ---------------------------------------------------------------------------------------------------------------
+    fig, ax = plt.subplots(figsize=figsize);
+    header = "C2H4";
+    scale_factor = 1000;
+    time_factor = 1000;
+
+    mech_index = 0;
+    mech_name = mech_names[mech_index]
+
+    # Experimental
+    t_data_exp = exp_df["t [s]"].to_numpy();
+    f_data_exp = exp_df["X_C2H4 [-]"].to_numpy();
+    f_sigma_exp = exp_df["sigmaX_C2H4 [-]"].to_numpy();
+
+    ax.plot(t_data_exp*time_factor, f_data_exp*scale_factor,
+        linewidth = linewidth, linestyle = "solid", 
+            label = "Data", color = exp_color);
+
+    ax.fill_between(t_data_exp*time_factor, (f_data_exp - f_sigma_exp)*scale_factor, (f_data_exp + f_sigma_exp)*scale_factor,
+                color = exp_color, alpha = area_alpha)
+
+    # Numerical
     for mech_index, mech_name in enumerate(mech_names):
         df = results_df[mech_name];
         t_data = df["t[s]"];
-        f_data = n_c_dict[header] * fetch_species_array(df, header) * MW_carbon / df["mean_MW[kg/mol]"] / mfc_c_0;
-        if not (f_data is None):
-            ax2.plot(t_data*time_factor, f_data*scale_factor,
-                   linewidth = linewidth, linestyle = linestyles[0],
-                    label = labels[mech_name], color = colors[mech_index]);
-    
-    ax2.tick_params(axis='both', labelsize = 14)
-    #Y axis
-    ax2.set_ylim([0.2, 1]);
-    ax2.yaxis.set_major_locator(MultipleLocator(0.2))
-    ax2.yaxis.set_minor_locator(MultipleLocator(0.04));
-    
-    # X axis
-    ax2.set_xlim([1e-3, 1e0]);
-    ax2.set_xscale("log");
-    #ax2.set_xticklabels(ax2.get_xticklabels(), fontsize = 14);
-    
-    ax2.text(0.81, 0.28, "(a)", transform=ax.transAxes, fontsize = 32)
-    
-    save_plot(header, postprocess_dir = postprocess_dir, pad = 0.4)
+        f_data =fetch_species_array(df, header);
+        linestyle = "dashed" if mech_name == "FFCM2" else "solid"
+        ax.plot(t_data*time_factor, f_data*scale_factor,
+            linewidth = linewidth, linestyle = linestyle,
+                label = labels[mech_name], color = colors[mech_index]);
 
+    #Y axis
+    ax.set_ylabel(f"Mole fraction of " + labels[header] + scale_to_label(scale_factor), {'fontsize' : axis_fontsize});
+    ax.set_ylim([0, 8.5]);
+    ax.yaxis.set_major_locator(MultipleLocator(2))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.4))
+
+    # X axis
+    ax.set_xlabel("t [ms]", {'fontsize' : axis_fontsize});
+    ax.set_xlim([-0.03, 2.03]);
+    ax.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.1))
+
+    ax.text(0.1, 0.85, "(b)", transform=ax.transAxes, fontsize = 32);
+
+    #### Zoomed in ------------------------------
+
+    left, bottom, width, height = [0.4, 0.42, 0.43, 0.4]
+    ax2 = fig.add_axes([left, bottom, width, height])
+
+    # Experimental
+    t_data_exp = exp_df["t [s]"].to_numpy();
+    f_data_exp = exp_df["X_C2H4 [-]"].to_numpy();
+    f_sigma_exp = exp_df["sigmaX_C2H4 [-]"].to_numpy();
+
+    ax2.plot(t_data_exp*time_factor, f_data_exp*scale_factor,
+        linewidth = linewidth, linestyle = "solid", 
+            label = "Data", color = exp_color);
+
+    ax2.fill_between(t_data_exp*time_factor, (f_data_exp - f_sigma_exp)*scale_factor, (f_data_exp + f_sigma_exp)*scale_factor,
+                color = exp_color, alpha = area_alpha)
+
+    # Numerical
+    for mech_index, mech_name in enumerate(mech_names):
+        df = results_df[mech_name];
+        t_data = df["t[s]"];
+        f_data =fetch_species_array(df, header);
+        linestyle = "dashed" if mech_name == "FFCM2" else "solid"
+        ax2.plot(t_data*time_factor, f_data*scale_factor,
+            linewidth = linewidth, linestyle = linestyle,
+                label = labels[mech_name], color = colors[mech_index]);
+
+    #Y axis
+    ax2.set_ylim([0, 8.5]);
+    ax2.yaxis.set_major_locator(MultipleLocator(2))
+    ax2.yaxis.set_minor_locator(MultipleLocator(0.4))
+    ax2.set_yticklabels(ax2.get_yticklabels(), fontsize = 14)
+
+    # X axis
+    ax2.set_xlim([-0.005, 0.2]);
+    ax2.xaxis.set_major_locator(MultipleLocator(0.1))
+    ax2.xaxis.set_minor_locator(MultipleLocator(0.02))
+    ax2.set_xticklabels(ax2.get_xticklabels(), fontsize = 14)
+
+    save_plot(header, postprocess_dir = postprocess_dir, pad = 0.4)
 
     # ---------------------------------------------------------------------------------------------------------------
     # Ploting the carbon mass fraction of C2H2
     # ---------------------------------------------------------------------------------------------------------------
-    plt.rcParams.update({"text.usetex": use_tex, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
     fig, ax = plt.subplots(figsize=figsize);
-
     header = "C2H2";
-    
-    scale_factor = 1;
+    scale_factor = 100;
     time_factor = 1000;
-    
-    mech_index = 0;
-    mech_name = mech_names[mech_index]
-    
+    # Experimental
+    t_data_exp = exp_df["t [s]"].to_numpy();
+    f_data_exp = exp_df["X_C2H2 [-]"].to_numpy();
+    f_sigma_exp = exp_df["sigmaX_C2H2 [-]"].to_numpy();
+
+    ax.plot(t_data_exp*time_factor, f_data_exp*scale_factor,
+        linewidth = linewidth, linestyle = "solid", 
+            label = "Data", color = exp_color);
+
+    ax.fill_between(t_data_exp*time_factor, (f_data_exp - f_sigma_exp)*scale_factor, (f_data_exp + f_sigma_exp)*scale_factor,
+                color = exp_color, alpha = area_alpha)
+
+    # Numerical
     for mech_index, mech_name in enumerate(mech_names):
         df = results_df[mech_name];
         t_data = df["t[s]"];
-        f_data = n_c_dict[header] * fetch_species_array(df, header) * MW_carbon / df["mean_MW[kg/mol]"] / mfc_c_0;
+        f_data =fetch_species_array(df, header);
+        linestyle = "dashed" if mech_name == "FFCM2" else "solid"
         ax.plot(t_data*time_factor, f_data*scale_factor,
-               linewidth = linewidth, linestyle = linestyles[0],
+            linewidth = linewidth, linestyle = linestyle,
                 label = labels[mech_name], color = colors[mech_index]);
-    
+
     #Y axis
-    ax.set_ylabel(f"Carbon mass fraction of " + labels[header] + scale_to_label(scale_factor), {'fontsize' : axis_fontsize});
-    ax.set_ylim([0, 0.85]);
-    ax.yaxis.set_major_locator(MultipleLocator(0.2))
-    ax.yaxis.set_minor_locator(MultipleLocator(0.04))
-    
+    ax.set_ylabel(f"Mole fraction of " + labels[header] + scale_to_label(scale_factor), {'fontsize' : axis_fontsize});
+    ax.set_ylim([0, 2.15]);
+    ax.yaxis.set_major_locator(MultipleLocator(0.5))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.1))
+
     # X axis
     ax.set_xlabel("t [ms]", {'fontsize' : axis_fontsize});
-    ax.set_xlim([-0.1, 5.1]);
-    ax.xaxis.set_major_locator(MultipleLocator(1))
-    ax.xaxis.set_minor_locator(MultipleLocator(0.2))
-    
-    ax.text(0.8, 0.45, "(b)", transform=ax.transAxes, fontsize = 32);
-    
-    
-    left, bottom, width, height = [0.34, 0.24, 0.35, 0.35]
-    ax2 = fig.add_axes([left, bottom, width, height])
-    
-    for mech_index, mech_name in enumerate(mech_names):
-        df = results_df[mech_name];
-        t_data = df["t[s]"];
-        f_data = n_c_dict[header] * fetch_species_array(df, header) * MW_carbon / df["mean_MW[kg/mol]"] / mfc_c_0;
-        if not (f_data is None):
-            ax2.plot(t_data*time_factor, f_data*scale_factor,
-                   linewidth = linewidth, linestyle = linestyles[0],
-                    label = labels[mech_name], color = colors[mech_index]);
-    
-    ax2.tick_params(axis='both', labelsize = 14)
-    #Y axis
-    ax2.set_ylim([0, 0.7]);
-    ax2.yaxis.set_major_locator(MultipleLocator(0.2))
-    ax2.yaxis.set_minor_locator(MultipleLocator(0.04))
-    
-    # X axis
-    ax2.set_xlim([1e-3, 1e-0]);
-    ax2.set_xscale("log");
+    ax.set_xlim([-0.03, 2.03]);
+    ax.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.1))
+
+    ax.text(0.06, 0.87, "(c)", transform=ax.transAxes, fontsize = 32);
     
     save_plot(header, postprocess_dir = postprocess_dir, pad = 0.4)
 
-    # ---------------------------------------------------------------------------------------------------------------
-    # Ploting the carbon mass fraction of A2R5
-    # ---------------------------------------------------------------------------------------------------------------
-    plt.rcParams.update({"text.usetex": use_tex, 'font.family':'Latin Modern Roman', 'font.size': fontsize, 'figure.constrained_layout.use': True});
+
+def plot_maxsoot():
+    # Plot configs
+    exp_color = "#ff8833";
+    area_alpha = 0.2
+    linewidth = 2;
+    figsize = (6, 6.5);
+    fontsize = 24;
+    axis_fontsize = 26;
+    plt.rcParams.update({"text.usetex": use_tex(), 'font.size': fontsize, 'figure.constrained_layout.use': True});
+    
+    result_dir = f"results_Max/";
+    exp_dir = "data";
+    postprocess_dir = f"post_process";
+    labels = {
+        "Caltech" : "Caltech",
+        "KAUST" : "KAUST",
+        "ABF1bar" : "ABF",
+        "ITV" : "ITV",
+        "CRECK" : "CRECK",
+    };
+    mech_names = ["Caltech", "KAUST", "ABF1bar", "ITV", "CRECK"];
+    # Reading the simulation results
+    results_df = defaultdict(
+        dict
+    );
+
+    # Reading the experimental data
+    exp_df = pd.read_csv(f"{exp_dir}/soot.csv");
+
+    for mech_name in mech_names:
+        file_path =  f"{result_dir}/{mech_name}/IrreversibleDimerization//T2203K.csv"
+        df = pd.read_csv(file_path);
+        results_df[mech_name] = df;
+
+
     fig, ax = plt.subplots(figsize=figsize);
-    
-    header = "A2R5";
-    
-    scale_factor = 1e2;
+
+    cmap_name = ['hsv', "YlOrRd", "YlGnBu", "YlGn"][0];
+    color_offset = 1
+    step = 1;
+    n_models = len(mech_names)+1;
+    cmap = plt.get_cmap(cmap_name, n_models*step + color_offset)
+
+    colors = [cmap(color_offset + i*step) for i in range(n_models)];
+    colors = colors[1:];
+
+    header = "volume_fraction";
+
+    Em_s = [0.174, 0.37]
+
+    scale_factor = 1e6;
     time_factor = 1000;
-    
+
     mech_index = 0;
-    mech_name = mech_names[mech_index]
-    
+    mech_name = mech_names[mech_index];
+
+    # Experimental
+    t_data_exp = exp_df["t [s]"].to_numpy();
+    f_rel_data_exp = exp_df["fv_rel_633nm"].to_numpy();
+    f_max_data_exp, f_min_data_exp = f_rel_data_exp / Em_s[0], f_rel_data_exp / Em_s[1];
+    f_mean_data_exp = (f_max_data_exp + f_min_data_exp) / 2.0;
+
+    ax.fill_between(t_data_exp*time_factor, f_min_data_exp*scale_factor, f_max_data_exp*scale_factor,
+                color = exp_color, alpha = area_alpha)
+    ax.plot(t_data_exp*time_factor, f_mean_data_exp*scale_factor,
+        linewidth = linewidth, linestyle = "solid", 
+            label = "Data", color = exp_color);
+        
+
+    # Numerical
     for mech_index, mech_name in enumerate(mech_names):
         df = results_df[mech_name];
         t_data = df["t[s]"];
         f_data = fetch_species_array(df, header);
         if not (f_data is None):
-            f_data = n_c_dict[header] * fetch_species_array(df, header) * MW_carbon / df["mean_MW[kg/mol]"] / mfc_c_0;
             ax.plot(t_data*time_factor, f_data*scale_factor,
-                   linewidth = linewidth, linestyle = linestyles[0],
+                linewidth = linewidth, linestyle = "solid",
                     label = labels[mech_name], color = colors[mech_index]);
-    
-    
+
+
+
+
     #Y axis
-    ax.set_ylabel(f"Carbon mass fraction of " + labels[header] + scale_to_label(scale_factor), {'fontsize' : axis_fontsize-3});
-    ax.set_ylim([0, 5]);
-    ax.yaxis.set_major_locator(MultipleLocator(1))
-    ax.yaxis.set_minor_locator(MultipleLocator(0.2))
-    
+    ax.set_ylabel("Soot volume fraction, $f_v$ [ppm]", {'fontsize' : axis_fontsize});
+    ax.set_ylim([0, 2]);
+    ax.yaxis.set_major_locator(MultipleLocator(0.5))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.1))
+
     # X axis
     ax.set_xlabel("t [ms]", {'fontsize' : axis_fontsize});
-    ax.set_xlim([-0.1, 5.1]);
-    ax.xaxis.set_major_locator(MultipleLocator(1))
-    ax.xaxis.set_minor_locator(MultipleLocator(0.2))
-    
-    
-    legend = ax.legend(loc = (0.03, 0.72), ncol = 2, fontsize = 18, columnspacing = 0.5,
-                    framealpha=0);
-    
-    ax.text(0.82, 0.84, "(c)", transform=ax.transAxes, fontsize = 32);
-    
-    save_plot(header, postprocess_dir = postprocess_dir, pad = 0.4)
+    ax.set_xlim([-0.05, 2.01]);
+    ax.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.1))
 
+    ax.legend(loc = (0.1, 1), ncol = 2, fontsize = 19, columnspacing = 1.1,
+                    framealpha=0);
+
+    save_plot("soot_fv_max", postprocess_dir = postprocess_dir, pad = 0.4)
 
 
 if __name__ == "__main__":
-    plot();
+    plot_nosoot();
+    plot_maxsoot();
 
