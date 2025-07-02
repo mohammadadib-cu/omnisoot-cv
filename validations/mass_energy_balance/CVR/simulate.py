@@ -7,7 +7,7 @@ import time
 
 Av = 6.0221408e+23; #1/mol;
 mech_dict = {
-    "Caltech":"data/Caltech.yaml",
+    "Caltech":"../mechanisms/Caltech.yaml",
 }
 
 
@@ -124,8 +124,6 @@ def simulate(
     soot_data = [];
     flow_columns = [];
     flow_data = [];
-    species_columns = [];
-    species_data = [];
 
     soot_columns += ["total_soot_mass[kg]"]
 
@@ -174,13 +172,11 @@ def simulate(
     flow_columns += ["U_gas[J]"];
     flow_data += [U_gas];
 
-    species_columns = [f"{sp}" for sp in gas.species_names];
-    species_data += [states.X[:,i] for i in range(len(gas.species_names))];
     
     ### Combining flow, soot & species columns 
-    columns = flow_columns + soot_columns + species_columns;
+    columns = flow_columns + soot_columns;
     data = np.vstack((
-        np.array(flow_data + soot_data + species_data),
+        np.array(flow_data + soot_data),
     )).transpose()
 
     ### creating data frame

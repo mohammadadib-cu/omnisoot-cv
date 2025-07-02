@@ -55,7 +55,7 @@ def plot():
     for PAH_growth_model in PAH_growth_models:
         for particle_dynamics_model in particle_dynamics_models:
             results_df[PAH_growth_model][particle_dynamics_model] = pd.read_csv(
-                f"{results_dir}/{particle_dynamics_model}/{PAH_growth_model}/sim_results.csv"
+                f"{results_dir}/Caltech/{particle_dynamics_model}/{PAH_growth_model}/results.csv"
             );
 
     grid = (2,2);
@@ -79,8 +79,8 @@ def plot():
             df = results_df[PAH_growth_model][particle_dynamics_model]
             # Carbon Flux
             t_data = df["t[s]"].to_numpy()*1000;        
-            C_flux = df["total_carbon_mass[kg]"].to_numpy();
-            z_data = np.abs(C_flux - C_flux[0])/C_flux[0];
+            C_mass = df["total_carbon_mass[kg]"].to_numpy();
+            z_data = np.abs(C_mass - C_mass[0])/C_mass[0];
             label = " " if particle_dynamics_model_index == 0 else "Carbon";
             
             ax.plot(t_data, z_data,
@@ -88,19 +88,19 @@ def plot():
             
             # Hydrogen Flux
             label = " " if particle_dynamics_model_index == 0 else "Hydrogen";
-            H_flux = df["total_hydrogen_mass[kg]"];
-            z_data = np.abs(H_flux - H_flux[0])/H_flux[0];
+            H_mass = df["total_hydrogen_mass[kg]"];
+            z_data = np.abs(H_mass - H_mass[0])/H_mass[0];
             ax.plot(t_data, z_data,
                 color=colors[1], linewidth = linewidth, label = label, linestyle = linestyles[particle_dynamics_model_index]);
             
             # Energy Flux
             label = " " if particle_dynamics_model_index == 0 else "Energy";
             e_res = (
-                (df["U_gas[J]"] - df["U_gas[J]"][0])
-                + (df["U_soot[J]"] - df["U_soot[J]"][0])
+                (df["H_gas[J]"] - df["H_gas[J]"][0])
+                + (df["H_soot[J]"] - df["H_soot[J]"][0])
             );
-            z_data = np.abs(e_res)/ df["U_gas[J]"][0]
-            
+            z_data = np.abs(e_res)/ (df["H_gas[J]"][0] + df["H_soot[J]"][0]);
+
             ax.plot(t_data, z_data,
                 color=colors[2], linewidth = linewidth, label = label, linestyle = linestyles[particle_dynamics_model_index]);
             
