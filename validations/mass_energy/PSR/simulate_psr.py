@@ -14,7 +14,6 @@ MW_hydrogen = 1.008e-3 # [kg/mol]
 simulation_time = 1;
 
 def simulate_psr(gas,
-                 mech_name, 
                  reactor_volume, 
                  pressure, 
                  residence_time, 
@@ -49,8 +48,11 @@ def simulate_psr(gas,
     
     soot = psr.soot;
     soot.particle_dynamics_model_type = particle_dynamics_model_type;
-    soot.particle_dynamics_model.spacing_factor = 1.1
-    soot.particle_dynamics_model._new_section_build = False;
+    pdynamics = soot.particle_dynamics_model
+    if particle_dynamics_model_type == "Sectional":
+        pdynamics.spacing_factor = 1.5;
+        pdynamics.number_of_sections = 40;
+    
     soot.PAH_growth_model_type = PAH_growth_model_type
     soot.set_precursor_names(precursors);
     
@@ -105,23 +107,21 @@ def simulate_psr(gas,
     while psr.restime < simulation_time:
         step += 1;
         psr.step();
-        log = f"t={psr.restime:0.4e} s";
         if step%20==0:
             append();
-        if step % 400 == 0:
+        if step % 1000 == 0:
+            log = f"t={psr.restime:0.4e} s";
             print(log);
     append();
     end_time = time.time();
-    print(f"the simulation time is {end_time-start_time}");
-    
-    
+    print(f"The simulation took {(end_time-start_time):0.4f} seconds");
+
+
     ### Building the data frame of the results
     soot_columns = [];
     soot_data = [];
     flow_columns = [];
     flow_data = [];
-    species_columns = [];
-    species_data = [];
 
     soot_columns += ["N_agg[mol/kg]", "N_pri[mol/kg]", "C_tot[mol/kg]", "H_tot[mol/kg]"];
     soot_data += [states.N_agg, states.N_pri, states.C_tot, states.H_tot];
@@ -153,8 +153,6 @@ def simulate_psr(gas,
     flow_columns += ["t[s]", "T[K]", "density[kg/m3]", "mean_MW[kg/mol]", "mdot[kg/s"];
     flow_data += [states.restime ,states.T, states.density, states.mean_molecular_weight/1000, states.mdot];
     
-    species_columns = [f"{sp}" for sp in gas.species_names];
-    species_data += [states.X[:,i] for i in range(len(gas.species_names))];
     
     C_flux_in = psr.mdot_in * (states.elemental_mass_fraction('C')[0]+states.C_tot[0]*MW_carbon);
     C_flux_out = (states.elemental_mass_fraction('C')+states.C_tot*MW_carbon)*states.mdot;
@@ -173,29 +171,11 @@ def simulate_psr(gas,
     error_columns = ["C_mass_error", "H_mass_error", "enthalpy_error"];
     error_data = [C_flux_error, H_flux_error, H_error]
 
-    columns = flow_columns + soot_columns + species_columns+error_columns;
-    data = (np.array(flow_data + soot_data + species_data + error_data)).transpose();
+    columns = flow_columns + soot_columns + error_columns;
+    data = (np.array(flow_data + soot_data + error_data)).transpose();
     
     output_dir = f"results/{particle_dynamics_model_type}/{PAH_growth_model_type}";
     if not os.path.exists(output_dir):
         os.makedirs(output_dir);
     prop_df = pd.DataFrame(data=data, columns = columns)
     prop_df.to_csv(f"{output_dir}/results.csv");
-    
-    # Output log
-    print(
-        f"The relative error in Carbon flux in {C_flux_error[-1]:0.5e}"
-    )
-    
-    print(
-        f"The relative error in Hydrogen flux in {H_flux_error[-1]:0.5e}"
-    )
-    
-
-    print(f"The difference in the enthalpy flux of gas is {(H2[-1]-H1):0.5e} J/s");
-    
-    
-    print(f"The enthlapy flux of generated particles is {(Hp[-1]):0.5e} J/s");
-
-    print(f"The energy residual is {(H2[-1]-H1+Hp[-1]):0.5e} J/s")
-    print(50*"-")

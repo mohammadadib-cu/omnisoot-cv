@@ -55,7 +55,7 @@ def plot():
     for PAH_growth_model in PAH_growth_models:
         for particle_dynamics_model in particle_dynamics_models:
             results_df[PAH_growth_model][particle_dynamics_model] = pd.read_csv(
-                f"{results_dir}/{particle_dynamics_model}/{PAH_growth_model}/sim_results.csv"
+                f"{results_dir}/Caltech/{particle_dynamics_model}/{PAH_growth_model}/sim_results.csv"
             );
 
     grid = (2,2);
@@ -79,7 +79,7 @@ def plot():
             df = results_df[PAH_growth_model][particle_dynamics_model]
             # Carbon Flux
             t_data = df["t[s]"].to_numpy()*1000;        
-            C_flux = df["total_carbon_mass[kg]"].to_numpy();
+            C_flux = df["total_carbon_mass_flow[kg/s]"].to_numpy();
             z_data = np.abs(C_flux - C_flux[0])/C_flux[0];
             label = " " if particle_dynamics_model_index == 0 else "Carbon";
             
@@ -88,18 +88,15 @@ def plot():
             
             # Hydrogen Flux
             label = " " if particle_dynamics_model_index == 0 else "Hydrogen";
-            H_flux = df["total_hydrogen_mass[kg]"];
+            H_flux = df["total_hydrogen_mass_flow[kg/s]"];
             z_data = np.abs(H_flux - H_flux[0])/H_flux[0];
             ax.plot(t_data, z_data,
                 color=colors[1], linewidth = linewidth, label = label, linestyle = linestyles[particle_dynamics_model_index]);
             
             # Energy Flux
             label = " " if particle_dynamics_model_index == 0 else "Energy";
-            e_res = (
-                (df["U_gas[J]"] - df["U_gas[J]"][0])
-                + (df["U_soot[J]"] - df["U_soot[J]"][0])
-            );
-            z_data = np.abs(e_res)/ df["U_gas[J]"][0]
+            e_flux = df["total_h"].to_numpy();
+            z_data = np.abs(e_flux - e_flux[0])/e_flux[0];
             
             ax.plot(t_data, z_data,
                 color=colors[2], linewidth = linewidth, label = label, linestyle = linestyles[particle_dynamics_model_index]);
@@ -129,7 +126,7 @@ def plot():
         
         ax.text(0.05, 0.88, labels[PAH_growth_model], transform=ax.transAxes, fontsize = 22);
         
-    save_plot("relerr_constuv", postprocess_dir = postprocess_dir)
+    save_plot("relerr_pfr", postprocess_dir = postprocess_dir)
 
 
 if __name__ == "__main__":
