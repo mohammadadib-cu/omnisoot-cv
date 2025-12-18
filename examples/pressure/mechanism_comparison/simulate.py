@@ -160,8 +160,8 @@ def simulate(
 
     soot_data += [states.total_soot_mass * states.gas_mass, states.volume_fraction, states.SSA];
 
-    soot_columns += ["total_carbon_mass[kg]", "carbon_yield"];
-    soot_data += [states.total_carbon_mass * states.gas_mass,
+    soot_columns += ["soot_carbon_mass[kg]", "total_carbon_mass[kg]", "carbon_yield"];
+    soot_data += [states.soot_carbon_mass * states.gas_mass,  states.total_carbon_mass * states.gas_mass,
                    states.soot_carbon_mass/states.total_carbon_mass[0]]
 
     soot_columns += ["total_hydrogen_mass[kg]"];

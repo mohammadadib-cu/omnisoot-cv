@@ -14,14 +14,14 @@ PAH_growth_model_types = ["ReactiveDimerization", "DimerCoalescence" ,"EBridgeMo
 initial_composition = {"CH4":0.05, "AR":0.95};
 T5_K = 2200; # K
 P5_atm = 4.5; # atm
-max_res_time = 100e-3; # s
+max_res_time = 10e-3; # s
 precursors = ["A2", "A3", "A4", "A2R5", "A3R5", "A4R5"];
 
 gas = ct.Solution(MECH_PATH[mech_name])
 
 t0 = time.time();
 for PAH_growth_model_type in PAH_growth_model_types:
-    simulate_shocktube(
+    simulate(
         mech_name = mech_name, 
         gas = gas,
         PAH_growth_model_type = PAH_growth_model_type, 
