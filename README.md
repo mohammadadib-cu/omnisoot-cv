@@ -14,4 +14,4 @@ omnisoot has been registered for copyright on 31 May 2023 by [Canadian Intellect
 Omnisoot is a standard Python package published on [PyPi](https://pypi.org/project/omnisoot/) that can be installed by `pip install omnisoot`
 
 # Theoretical Foundation
-The mathematical basis of omnisoot including the transport equations of the reactors, particle dynamics models, inception and surface growth models are explained in the corresponding [paper](https://github.com/mohammadadib-cu/omnisootpaper).
+The mathematical basis of omnisoot including the transport equations of the reactors, particle dynamics models, inception and surface growth models are explained in the corresponding [paper](https://arxiv.org/pdf/2507.10879).
