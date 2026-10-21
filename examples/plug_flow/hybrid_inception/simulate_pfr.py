@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------
-# This example demonstrates the HybridDimerization model in Omnisoot (>0.3.1).
+# This example demonstrates the HybridDimerization model in Omnisoot (>0.3.2).
 #
 # HybridDimerization allows users to combine ReactiveDimerization,
 # IrreversibleDimerization, DimerCoalescence, and EBridgeModified as
@@ -13,6 +13,7 @@
 #     data to Cantera's SolutionArray.
 #   - Configuration of soot submodels using a YAML file, reducing script
 #     complexity and allowing settings to be reused across simulations.
+#   - Initializing reactors using Cantera's Solution object instead of SootGas. 
 # --------------------------------------------------------------------------
 # Declarations
 import time
@@ -30,9 +31,8 @@ reactor_length = 1; # m
 reactor_area = 3.14 * 15e-2**2; # m3
 # Creating the solution object and passing it to SootGas which is wrapper connecting chemistry to soot model
 gas = ct.Solution(oms.data_dir/"Caltech.yaml")
-soot_gas = oms.SootGas(gas);
 # Configuring the reactor
-reactor = oms.PlugFlowReactor(soot_gas);
+reactor = oms.PlugFlowReactor(gas);
 reactor.inlet.TPX = T5_K, P5_atm*ct.one_atm, inlet_composition;
 reactor.inlet.mdot = reactor_inlet_mdot;
 reactor.inlet_area = reactor_area;
