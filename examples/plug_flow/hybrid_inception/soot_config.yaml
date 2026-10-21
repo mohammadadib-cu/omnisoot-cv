@@ -2,7 +2,7 @@ surface_sites_model_type: Monodisperse
 surface_sites_model_type: ConstantSites
 PAH_growth_model_type: HybridDimerization
 PAH_growth_model:
-  submodel_type_names: [ReactiveDimerization, "EBridgeModified"]
+  submodel_type_names: [ReactiveDimerization, EBridgeModified]
   ReactiveDimerization:
     inception_prefactor: 0.01
     adsorption_prefactor : 0.1
